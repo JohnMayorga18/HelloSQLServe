@@ -1,0 +1,96 @@
+Copia y pega estas instrucciones y guárdalas dentro del archivo “.yml”: 
+#JohnMayorga18 
+#SENA-Learner
+
+name: Create DB SQL Serve
+on: push
+
+jobs:
+
+  HablandoAlAzurePortal:
+   permissions:
+    actions: read
+    contents: read
+    id-token: write
+   name: Creando Recursos Azure
+   runs-on: ubuntu-latest
+   steps:
+    - uses: actions/checkout@v3
+    
+    #Inicio Sesion Azure
+    - name: LogingAzureCLI
+      uses: azure/login@v1.4.3
+      with:
+       client-id: ${{ secrets.AZURE_CLIENT_ID }}
+       tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+       subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    #Creo el ResourceGroup
+    - name: Creando GrupoRecursos
+      shell: bash
+      run: |
+       az group create \
+       --location westus \
+       --name ${{ secrets.AZURE_RESOURCE_GROUP }} \
+       --tags Organización=SENA Lenguaje=SQL Plataforma=MsSQL
+
+    #Creo el SQLServe
+    - name: Creando SQL Serve
+      shell: bash
+      run: |
+       az sql server create --name ${{ secrets.AZURE_SQL_Serve_Name }} \
+       --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+       --admin-password ${{ secrets.AZURE_SQL_Admin_Password }} \
+       --admin-user ${{ secrets.AZURE_SQL_Admin_USSER }} \
+       --enable-public-network false \
+       --location westus \
+       --minimal-tls-version 1.2 \
+       --enable-public-network true 
+
+    #Creo la FireWall Rule
+    - name: Agregando Regla FireWall
+      shell: bash
+      run: |
+       az sql server firewall-rule create --name ALL \
+       --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+       --server ${{ secrets.AZURE_SQL_Serve_Name }} \
+       --end-ip-address 255.255.255.255 \
+       --start-ip-address 0.0.0.0   
+
+    #Creo la DB SQL
+    - name: Creando SQL-DB
+      shell: bash
+      run: |
+       az sql db create --name ${{ secrets.AZURE_SQL_DBName }} \
+       --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+       --server ${{ secrets.AZURE_SQL_Serve_Name }} \
+       --catalog-collation SQL_Latin1_General_CP1_CI_AS \
+       --capacity 1 \
+       --compute-model Serverless \
+       --family Gen5 \
+       --edition GeneralPurpose \
+       --license-type BasePrice \
+       --max-size 4GB \
+       --min-capacity 0.5 \
+       --zone-redundant false \
+       --auto-pause-delay -1   
+        
+  HablandoConLaDB:
+   needs: [HablandoAlAzurePortal]
+   name: Autenticando Con el Serve y subiendo el Esquema
+   runs-on: ubuntu-latest
+   steps:   
+      - uses: actions/checkout@v3
+      
+      - name: Instalando el Modulo SQL
+        shell: pwsh
+        run: Install-Module -Name SqlServer -AllowClobber -Force
+      - name: Instalando el Modulo SQL
+        shell: pwsh
+        run: Install-Module -Name SqlServer -Force
+      - name: Importando Modulo SQL Server
+        shell: pwsh
+        run: Import-Module SqlServer
+      - name: Ejecutando escripts SQL
+        shell: pwsh
+        run: Invoke-Sqlcmd -InputFile ./SQL/DBScript.sql -ServerInstance ${{ secrets.AZURE_SQL_Serve_Name }}".database.windows.net" -Database ${{ secrets.AZURE_SQL_DBName }} -Username ${{ secrets.AZURE_SQL_Admin_USSER }} -Password ${{ secrets.AZURE_SQL_Admin_Password }}

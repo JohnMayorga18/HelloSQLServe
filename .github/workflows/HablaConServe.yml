@@ -92,4 +92,4 @@ jobs:
         run: Import-Module SqlServer
       - name: Ejecutando escripts SQL
         shell: pwsh
-        run: Invoke-Sqlcmd -InputFile ./SQL/DBScript.sql -ServerInstance ${{ secrets.AZURE_SQL_Serve_Name }}".database.windows.net" -Database ${{ secrets.AZURE_SQL_DBName }} -Username ${{ secrets.AZURE_SQL_Admin_USSER }} -Password ${{ secrets.AZURE_SQL_Admin_Password }}
+        run: Invoke-Sqlcmd -InputFile ./SQL/Script.sql -ServerInstance ${{ secrets.AZURE_SQL_Serve_Name }}".database.windows.net" -Database ${{ secrets.AZURE_SQL_DBName }} -Username ${{ secrets.AZURE_SQL_Admin_USSER }} -Password ${{ secrets.AZURE_SQL_Admin_Password }}
